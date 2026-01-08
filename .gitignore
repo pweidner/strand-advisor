@@ -1,0 +1,19 @@
+# outputs / runs
+runs/
+output/
+scratch/
+
+# large assets (kept externally)
+*.fa
+*.fai
+*.vcf
+*.vcf.gz
+*.tbi
+*.bam
+*.bai
+
+# logs
+*.log
+
+# python cache
+__pycache__/
