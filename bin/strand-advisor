@@ -40,6 +40,7 @@ One of:
   --sv-h1 SV_H1.bed --sv-h2 SV_H2.bed
 
 Optional:
+  --threads N (default: 16)
   --refcells N
   --hp-density FLOAT      (0–1, default 1.0)
   --snp-h1 BED
@@ -73,6 +74,7 @@ SNP_H2=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --cells) CELLS="$2"; shift 2;;
+    --threads) THREADS="$2"; shift 2;;
     --refcells) REFCELLS="$2"; shift 2;;
     --regions) REGIONS="$2"; shift 2;;
     --sv-h1) SV_H1="$2"; shift 2;;
@@ -189,14 +191,31 @@ awk -v p="$HP_DENSITY" 'BEGIN{srand()} rand()<p{print}' "$SNP_H2" > "$HP2_SITES"
 # Run VISOR SHORtS
 ###############################################################################
 echo "[INFO] Running VISOR SHORtS"
+
+# --refcells is a COUNT in strand-advisor; VISOR expects a PERCENTAGE.
+if ! [[ "$REFCELLS" =~ ^[0-9]+$ ]]; then
+  die "--refcells must be an integer count (0..cells)"
+fi
+if [ "$REFCELLS" -gt "$CELLS" ]; then
+  die "--refcells ($REFCELLS) cannot be > --cells ($CELLS)"
+fi
+
+REFCELLS_PCT=$(awk -v r="$REFCELLS" -v c="$CELLS" 'BEGIN{
+  if (c==0) { print 0; exit }
+  printf "%.1f", (r/c)*100.0
+}')
+echo "[INFO] refcells: $REFCELLS of $CELLS => VISOR --refcells $REFCELLS_PCT%"
+
 VISOR SHORtS \
   -g "$REF_FASTA" \
   -s "$HACK_DIR" \
   -b "$REGIONS" \
   -o "$OUT/visor_raw" \
   --strandseq \
+  --coverage "$COVERAGE" \
+  --threads "$THREADS" \
   --cells "$CELLS" \
-  --refcells "$REFCELLS"
+  --refcells "$REFCELLS_PCT"
 
 ###############################################################################
 # Inheritance + sparse HP tagging
