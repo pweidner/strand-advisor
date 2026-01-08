@@ -6,6 +6,13 @@ set -euo pipefail
 ###############################################################################
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/common.sh"
+# Load defaults (cluster-level config)
+DEFAULTS_FILE="$ROOT/config/defaults.env"
+if [ -f "$DEFAULTS_FILE" ]; then
+  # shellcheck disable=SC1090
+  source "$DEFAULTS_FILE"
+fi
+
 
 need VISOR
 need samtools
@@ -92,6 +99,8 @@ done
 [ -n "${REF_FASTA:-}" ] || die "REF_FASTA environment variable not set"
 [ -f "$REF_FASTA" ] || die "REF_FASTA not found"
 [ -f "$REF_FASTA.fai" ] || samtools faidx "$REF_FASTA"
+echo "[INFO] Using REF_FASTA: $REF_FASTA"
+echo "[INFO] Using ASSETS_DIR: ${ASSETS_DIR:-<unset>}"
 
 awk -v p="$HP_DENSITY" 'BEGIN{ if(p<0||p>1) exit 1 }' \
   || die "--hp-density must be between 0 and 1"
@@ -158,10 +167,10 @@ fi
 # Resolve SNP beds for HP tagging
 ###############################################################################
 if [ -z "$SNP_H1" ]; then
-  SNP_H1="$ROOT/examples/${SNP_SAMPLE}.snps.h1.bed"
+  SNP_H1="${SNP_H1:-${ASSETS_DIR:-$ROOT}/snp_sites/${SNP_SAMPLE}.snps.h1.bed}"
 fi
 if [ -z "$SNP_H2" ]; then
-  SNP_H2="$ROOT/examples/${SNP_SAMPLE}.snps.h2.bed"
+  SNP_H2="${SNP_H2:-${ASSETS_DIR:-$ROOT}/snp_sites/${SNP_SAMPLE}.snps.h2.bed}"
 fi
 
 [ -f "$SNP_H1" ] || die "SNP h1 BED not found"
