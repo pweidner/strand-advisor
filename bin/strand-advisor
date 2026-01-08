@@ -80,6 +80,7 @@ while [[ $# -gt 0 ]]; do
     --sv-h1) SV_H1="$2"; shift 2;;
     --sv-h2) SV_H2="$2"; shift 2;;
     --hack) HACK_DIR="$2"; shift 2;;
+    --sce) SCE_BED="$2"; shift 2;;
     --hp-density) HP_DENSITY="$2"; shift 2;;
     --snp-h1) SNP_H1="$2"; shift 2;;
     --snp-h2) SNP_H2="$2"; shift 2;;
@@ -215,7 +216,8 @@ VISOR SHORtS \
   --coverage "$COVERAGE" \
   --threads "$THREADS" \
   --cells "$CELLS" \
-  --refcells "$REFCELLS_PCT"
+  --refcells "$REFCELLS_PCT" \
+  --sce "$SCE_BED"
 
 ###############################################################################
 # Inheritance + sparse HP tagging
@@ -223,7 +225,10 @@ VISOR SHORtS \
 echo -e "cell\tchrom\tstate" > "$OUT/truth/inheritance_states.tsv"
 states=(WW WC CW CC)
 
-for cell in "$OUT/visor_raw"/sample_cell*; do
+for cell in "$OUT/visor_raw"/sample_cell* "$OUT/visor_raw"/reference_cell*; do
+  
+  [ -d "$cell" ] || continue
+  
   cname=$(basename "$cell")
   tmpdir=$(mktemp -d)
 
