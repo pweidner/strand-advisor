@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/common.sh"
 
@@ -10,9 +13,47 @@ need awk
 need shuf
 need python3
 
+<<<<<<< Updated upstream
 ###############################################################################
 # Usage
 ###############################################################################
+=======
+DEFAULTS_FILE=${DEFAULTS_FILE:-$ROOT/config/defaults.env}
+[ -f "$DEFAULTS_FILE" ] || die "Defaults file not found: $DEFAULTS_FILE"
+# shellcheck disable=SC1090
+source "$DEFAULTS_FILE"
+
+make_active_chroms () {
+  local chroms_file="$1"
+  local ref_fai="$2"
+  local hack_dir="$3"
+  local out_file="$4"
+
+  [ -f "$chroms_file" ] || die "CHROMS_FILE not found: $chroms_file"
+  [ -f "$ref_fai" ] || die "Reference index not found: $ref_fai"
+
+  [ -f "$hack_dir/h1.fa" ] || die "Missing $hack_dir/h1.fa"
+  [ -f "$hack_dir/h1.fa.fai" ] || samtools faidx "$hack_dir/h1.fa"
+
+  if [ -f "$hack_dir/h2.fa" ] && [ ! -f "$hack_dir/h2.fa.fai" ]; then
+    samtools faidx "$hack_dir/h2.fa"
+  fi
+
+  cut -f1 "$ref_fai" | sort -u > "$out_file.ref"
+  cut -f1 "$hack_dir/h1.fa.fai" | sort -u > "$out_file.hap"
+  if [ -f "$hack_dir/h2.fa.fai" ]; then
+    cut -f1 "$hack_dir/h2.fa.fai" | sort -u >> "$out_file.hap"
+    sort -u "$out_file.hap" -o "$out_file.hap"
+  fi
+  awk 'NF{print $1}' "$chroms_file" | sort -u > "$out_file.cfg"
+
+  comm -12 <(comm -12 "$out_file.cfg" "$out_file.ref") "$out_file.hap" > "$out_file"
+
+  rm -f "$out_file.ref" "$out_file.hap" "$out_file.cfg"
+  [ -s "$out_file" ] || die "No overlapping chromosomes between CHROMS_FILE, reference, and haplotypes. Check naming (chr1 vs 1)."
+}
+
+>>>>>>> Stashed changes
 usage() {
 cat <<EOF
 strand-advisor
@@ -53,7 +94,13 @@ REGIONS=""
 SV_H1=""
 SV_H2=""
 HACK_DIR=""
+<<<<<<< Updated upstream
 HP_DENSITY=1.0
+=======
+OUT_RUN=""
+REGIONS_OVERRIDE=""
+HP_DENSITY="0.4"
+>>>>>>> Stashed changes
 SNP_SAMPLE="HG00732"
 SNP_H1=""
 SNP_H2=""
@@ -91,7 +138,17 @@ done
 [ -f "$REF_FASTA" ] || die "REF_FASTA not found"
 [ -f "$REF_FASTA.fai" ] || samtools faidx "$REF_FASTA"
 
+<<<<<<< Updated upstream
 awk -v p="$HP_DENSITY" 'BEGIN{ if(p<0||p>1) exit 1 }' || die "--hp-density must be 0–1"
+=======
+OUT_RUN=${OUT_RUN:-results/run_$(date +%Y%m%d_%H%M%S)}
+RAW_OUT="$OUT_RUN/raw_visor"
+FINAL_OUT="$OUT_RUN/bam"
+REGIONS_BED="$OUT_RUN/regions.bed"
+LEDGER="$OUT_RUN/inheritance_states.tsv"
+HP1_SITES="$OUT_RUN/hp_sites.HP1.bed"
+HP2_SITES="$OUT_RUN/hp_sites.HP2.bed"
+>>>>>>> Stashed changes
 
 ###############################################################################
 # Prepare run directory
@@ -216,6 +273,7 @@ for cell in "$OUT/visor_raw"/sample_cell*; do
       | samtools view -b -o "$tmp/${chr}.h2.bam" -
   done < <(awk '{print $1}' "$REGIONS")
 
+<<<<<<< Updated upstream
   samtools merge -f "$tmp/merged.bam" "$tmp"/*.bam
   samtools sort -o "$OUT/final_cells/$cname.bam" "$tmp/merged.bam"
   samtools index "$OUT/final_cells/$cname.bam"
@@ -224,3 +282,29 @@ for cell in "$OUT/visor_raw"/sample_cell*; do
 done
 
 echo "[DONE] Output written to $OUT"
+=======
+    samtools view -h "$h1bam" "$chrom" \
+      | /lib//lib/tag_hp_sparse.py --sites "$HP1_SITES" --hp 1 \
+      | samtools view -b -o "$out1" -
+    samtools view -h "$h2bam" "$chrom" \
+      | /lib//lib/tag_hp_sparse.py --sites "$HP2_SITES" --hp 2 \
+      | samtools view -b -o "$out2" -
+
+    chunks+=("$out1" "$out2")
+  done < "$ACTIVE_CHROMS"
+
+  outbam="$FINAL_OUT/${cname}.bam.htg"
+  samtools merge -f "$tmpdir/${cname}.merged.bam" "${chunks[@]}"
+  samtools sort -o "$outbam" "$tmpdir/${cname}.merged.bam"
+  samtools index "$outbam"
+
+  rm -rf "$tmpdir"
+  trap - EXIT
+  echo "[OK] $outbam"
+done
+
+echo "[DONE] Raw VISOR:  $RAW_OUT"
+echo "[DONE] Final BAMs: $FINAL_OUT"
+echo "[DONE] Ledger:    $LEDGER"
+echo "[DONE] HP sites:  $HP1_SITES and $HP2_SITES"
+>>>>>>> Stashed changes
