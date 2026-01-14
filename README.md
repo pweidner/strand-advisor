@@ -1,3 +1,5 @@
+<img src="strand-advisor.png" alt="drawing" width="200"/>
+
 # strand-advisor v1.0 — In silico Strand-seq ground-truth generator (VISOR wrapper)
 
 `strand-advisor` is a lightweight command-line wrapper around **VISOR** that generates **in silico Strand-seq BAMs** with:
